@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深渊呼吸 - 手机预览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .mobile-container {
+            position: relative;
+            width: 375px; /* iPhone标准宽度 */
+            height: 812px; /* iPhone X标准高度 9:19.5≈9:16 */
+            background: #000;
+            border-radius: 40px;
+            padding: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+                        0 0 0 8px #1a1a1a,
+                        0 0 0 10px #333;
+            overflow: hidden;
+        }
+        
+        /* 刘海屏 */
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 30px;
+            background: #000;
+            border-radius: 0 0 20px 20px;
+            z-index: 1000;
+        }
+        
+        /* 扬声器 */
+        .speaker {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            z-index: 1001;
+        }
+        
+        /* 摄像头 */
+        .camera {
+            position: absolute;
+            top: 10px;
+            right: 60px;
+            width: 12px;
+            height: 12px;
+            background: #1a1a1a;
+            border: 2px solid #333;
+            border-radius: 50%;
+            z-index: 1001;
+        }
+        
+        /* 屏幕 */
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: 30px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* 游戏iframe */
+        #game-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+        
+        /* 底部指示条（iPhone X风格） */
+        .home-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 134px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            z-index: 1000;
+        }
+        
+        /* 控制面板 */
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px 30px;
+            border-radius: 50px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .controls button {
+            background: #00ffff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        
+        .controls button:hover {
+            background: #00cccc;
+            transform: scale(1.05);
+        }
+        
+        .controls .info {
+            color: #00ffff;
+            font-size: 14px;
+        }
+        
+        /* 旋转提示 */
+        .rotate-hint {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid #00ffff;
+            padding: 15px 30px;
+            border-radius: 10px;
+            color: #00ffff;
+            font-size: 14px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        /* 响应式：真实手机上全屏显示 */
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+                background: #000;
+            }
+            
+            .mobile-container {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+                padding: 0;
+                box-shadow: none;
+            }
+            
+            .screen {
+                border-radius: 0;
+            }
+            
+            .notch,
+            .speaker,
+            .camera {
+                display: none;
+            }
+            
+            .controls {
+                display: none;
+            }
+            
+            .rotate-hint {
+                display: none;
+            }
+        }
+        
+        /* 横屏警告 */
+        @media (orientation: landscape) and (max-width: 926px) {
+            .landscape-warning {
+                display: flex !important;
+            }
+        }
+        
+        .landscape-warning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            color: #00ffff;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 10000;
+            font-size: 1.5rem;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .landscape-warning::before {
+            content: "📱";
+            font-size: 5rem;
+            margin-bottom: 20px;
+            animation: rotate 2s infinite;
+        }
+        
+        @keyframes rotate {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 横屏警告 -->
+    <div class="landscape-warning">
+        <div>请将设备旋转为竖屏</div>
+        <div style="font-size: 1rem; margin-top: 20px; opacity: 0.7;">
+            Portrait mode only
+        </div>
+    </div>
+    
+    <!-- 旋转提示 -->
+    <div class="rotate-hint">
+        📱 手机模拟器 - 竖屏 9:16
+    </div>
+    
+    <!-- 手机外壳 -->
+    <div class="mobile-container">
+        <!-- 刘海 -->
+        <div class="notch">
+            <div class="speaker"></div>
+            <div class="camera"></div>
+        </div>
+        
+        <!-- 屏幕 -->
+        <div class="screen">
+            <iframe id="game-frame" src="index.html" allow="autoplay"></iframe>
+        </div>
+        
+        <!-- 底部指示条 -->
+        <div class="home-indicator"></div>
+    </div>
+    
+    <!-- 控制面板 -->
+    <div class="controls">
+        <div class="info">375×812</div>
+        <button onclick="reload()">🔄 重新加载</button>
+        <button onclick="fullscreen()">📱 全屏</button>
+        <button onclick="openGame()">🚀 新窗口</button>
+    </div>
+    
+    <script>
+        function reload() {
+            document.getElementById('game-frame').src = 'index.html?' + Date.now();
+        }
+        
+        function fullscreen() {
+            const container = document.querySelector('.mobile-container');
+            if (container.requestFullscreen) {
+                container.requestFullscreen();
+            }
+        }
+        
+        function openGame() {
+            window.open('index.html', '_blank');
+        }
+        
+        // 监听iframe加载
+        const frame = document.getElementById('game-frame');
+        frame.onload = () => {
+            console.log('✓ 游戏加载完成');
+        };
+    </script>
+</body>
+</html>

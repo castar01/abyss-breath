@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>深渊呼吸 - 调试测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        #status {
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid #00ffff;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 600px;
+        }
+        h1 {
+            color: #00ffff;
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+        .info {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        .success {
+            color: #00ff00;
+        }
+        .error {
+            color: #ff0000;
+        }
+        button {
+            background: #00ffff;
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #00cccc;
+            transform: scale(1.05);
+        }
+        #video-test {
+            display: none;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #video-test.show {
+            display: block;
+        }
+        .log {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #00ffff;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.8rem;
+            display: none;
+        }
+        .log.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <video id="video-test" playsinline webkit-playsinline></video>
+        
+        <div id="status">
+            <h1>🎮 深渊呼吸 - 系统检测</h1>
+            <div class="info" id="check-result">正在检测...</div>
+            <div id="buttons"></div>
+        </div>
+    </div>
+    
+    <div id="log" class="log"></div>
+    
+    <script>
+        const log = (msg, type = 'info') => {
+            const logDiv = document.getElementById('log');
+            logDiv.classList.add('show');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div style="color: ${type === 'error' ? '#ff0000' : '#00ffff'}">[${time}] ${msg}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        };
+        
+        const checkResult = document.getElementById('check-result');
+        const buttons = document.getElementById('buttons');
+        
+        log('页面加载完成');
+        log('当前URL: ' + window.location.href);
+        
+        // 检测环境
+        if (window.location.protocol === 'file:') {
+            checkResult.innerHTML = `
+                <div class="error">❌ 错误：使用了 file:// 协议</div>
+                <div style="margin-top: 15px;">必须通过HTTP服务器启动！</div>
+                <div style="margin-top: 10px; font-size: 0.9rem; color: #ffaa00;">
+                    请在终端运行：<br>
+                    <code style="background: #000; padding: 5px 10px; display: inline-block; margin-top: 5px; border-radius: 4px;">
+                    cd "/Users/satellite/深渊呼吸" && python3 -m http.server 8000
+                    </code>
+                </div>
+            `;
+            log('检测到file://协议，需要HTTP服务器', 'error');
+        } else {
+            checkResult.innerHTML = '<div class="success">✅ HTTP服务器运行正常</div>';
+            log('HTTP服务器正常');
+            
+            // 测试文件访问
+            fetch('game.js')
+                .then(response => {
+                    if (response.ok) {
+                        log('✓ game.js 可访问');
+                        checkResult.innerHTML += '<div class="success">✅ 游戏文件可访问</div>';
+                        testVideo();
+                    } else {
+                        throw new Error('game.js 不存在');
+                    }
+                })
+                .catch(err => {
+                    log('✗ ' + err.message, 'error');
+                    checkResult.innerHTML += '<div class="error">❌ 游戏文件无法访问</div>';
+                });
+        }
+        
+        function testVideo() {
+            const videoPath = '游戏素材/序章/序章-场景1/睁眼视频.mp4';
+            log('测试视频: ' + videoPath);
+            
+            fetch(videoPath, {method: 'HEAD'})
+                .then(response => {
+                    if (response.ok) {
+                        log('✓ 视频文件可访问');
+                        checkResult.innerHTML += '<div class="success">✅ 视频素材可访问</div>';
+                        showButtons();
+                    } else {
+                        throw new Error('视频文件不存在');
+                    }
+                })
+                .catch(err => {
+                    log('✗ ' + err.message, 'error');
+                    checkResult.innerHTML += '<div class="error">❌ 视频路径有问题</div>';
+                    showButtons();
+                });
+        }
+        
+        function showButtons() {
+            buttons.innerHTML = `
+                <button onclick="playTestVideo()">📹 测试播放视频</button>
+                <button onclick="startGame()">🚀 启动完整游戏</button>
+            `;
+        }
+        
+        function playTestVideo() {
+            log('开始播放测试视频');
+            const video = document.getElementById('video-test');
+            const status = document.getElementById('status');
+            
+            video.src = '游戏素材/序章/序章-场景1/睁眼视频.mp4';
+            video.classList.add('show');
+            status.style.display = 'none';
+            
+            video.play()
+                .then(() => {
+                    log('✓ 视频播放成功');
+                })
+                .catch(err => {
+                    log('✗ 视频播放失败: ' + err.message, 'error');
+                    alert('视频播放失败: ' + err.message);
+                });
+            
+            video.onended = () => {
+                log('视频播放结束');
+                video.classList.remove('show');
+                status.style.display = 'block';
+                alert('✅ 视频测试成功！可以启动完整游戏了！');
+            };
+        }
+        
+        function startGame() {
+            log('跳转到完整游戏');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
