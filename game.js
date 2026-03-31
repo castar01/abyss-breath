@@ -167,17 +167,20 @@ function hideAllUI() {
     elements.imagePopup.classList.add('hidden');
 }
 
-// 播放视频
-function playVideo(videoPath, onEnd) {
-    console.log('播放视频:', videoPath);
+// 播放视频（带自动重试）
+function playVideo(videoPath, onEnd, _retryCount) {
+    const maxRetries = 3;
+    const attempt = (_retryCount || 0) + 1;
+    console.log('播放视频:', videoPath, attempt > 1 ? '(第' + attempt + '次尝试)' : '');
     
-    // 隐藏背景图，确保视频可见
     elements.bgImage.classList.remove('active');
+    
+    elements.video.onended = null;
+    elements.video.onerror = null;
     
     elements.video.src = videoPath;
     elements.video.classList.add('active');
     
-    // 尝试播放视频
     const playPromise = elements.video.play();
     
     if (playPromise !== undefined) {
@@ -186,10 +189,12 @@ function playVideo(videoPath, onEnd) {
                 console.log('✓ 视频播放成功');
             })
             .catch(error => {
-                console.error('✗ 视频播放失败:', error);
-                alert('视频播放失败，请检查素材文件：' + videoPath);
-                // 如果播放失败，直接跳到结束回调
-                if (onEnd) onEnd();
+                console.error('✗ 视频播放失败 (第' + attempt + '次):', error);
+                if (attempt < maxRetries) {
+                    setTimeout(() => playVideo(videoPath, onEnd, attempt), 1000);
+                } else {
+                    showVideoRetryButton(videoPath, onEnd);
+                }
             });
     }
     
@@ -199,12 +204,33 @@ function playVideo(videoPath, onEnd) {
         if (onEnd) onEnd();
     };
     
-    // 添加错误处理
     elements.video.onerror = () => {
-        console.error('✗ 视频加载错误:', videoPath);
+        console.error('✗ 视频加载错误 (第' + attempt + '次):', videoPath);
         elements.video.classList.remove('active');
-        alert('视频加载失败：' + videoPath + '\n请检查文件是否存在');
-        if (onEnd) onEnd();
+        if (attempt < maxRetries) {
+            setTimeout(() => playVideo(videoPath, onEnd, attempt), 1000);
+        } else {
+            showVideoRetryButton(videoPath, onEnd);
+        }
+    };
+}
+
+function showVideoRetryButton(videoPath, onEnd) {
+    elements.video.classList.remove('active');
+    elements.hintText.classList.remove('hidden');
+    elements.hintText.innerHTML = 
+        '<div style="text-align:center;">' +
+        '<div style="font-size:0.95rem;color:#ccc;margin-bottom:15px;">视频加载失败，请检查网络后重试</div>' +
+        '<button id="video-retry-btn" style="background:rgba(15,20,25,0.9);' +
+        'border:2px solid #00ffff;color:#00ffff;font-size:1rem;padding:10px 30px;' +
+        'font-family:\'Noto Sans SC\',sans-serif;cursor:pointer;">重新加载</button>' +
+        '</div>';
+    elements.hintText.classList.add('active');
+    
+    document.getElementById('video-retry-btn').onclick = () => {
+        elements.hintText.classList.remove('active');
+        elements.hintText.classList.add('hidden');
+        playVideo(videoPath, onEnd);
     };
 }
 
@@ -327,12 +353,11 @@ function showChoices(choices) {
     choices.forEach((choice, index) => {
         const button = document.createElement('button');
         button.className = 'choice-button';
-        button.innerHTML = choice.text; // 改为innerHTML支持<br>换行
+        button.innerHTML = choice.text;
         button.onclick = () => {
-            // 记录选择
             gameData.choices.push({
                 scene: currentScene,
-                choice: choice.text.replace(/<br>/g, ' '), // 移除HTML标签记录
+                choice: choice.text.replace(/<br>/g, ' '),
                 timestamp: Date.now()
             });
             
@@ -344,6 +369,19 @@ function showChoices(choices) {
         };
         elements.choiceContainer.appendChild(button);
     });
+    
+    // 返回键：重新播放当前场景
+    const backBtn = document.createElement('button');
+    backBtn.className = 'choice-button back-button';
+    backBtn.innerHTML = '↩ 返回上一步';
+    backBtn.onclick = () => {
+        elements.choiceContainer.classList.remove('active');
+        setTimeout(() => {
+            elements.choiceContainer.classList.add('hidden');
+            playScene(currentScene);
+        }, 300);
+    };
+    elements.choiceContainer.appendChild(backBtn);
     
     elements.choiceContainer.classList.add('active');
 }
@@ -498,7 +536,7 @@ function prologueScene1() {
             setTimeout(() => {
                 playVideo('游戏素材/序章/序章-场景1/睁眼视频.mp4', () => {
                     console.log('开场视频播放完毕');
-                    showBackground('游戏素材/序章/序章-场景1/02 手术灯画面（虚化）.JPG');
+                    showBackground('游戏素材/序章/序章-场景1/手术灯画面（虚化）.JPG');
                     showInteractionButton('开始校准', () => {
                         playScene('prologue_2');
                     });
@@ -700,8 +738,8 @@ function chapter2Scene3() {
             {
                 text: 'A. [ 查看档案详情 ]',
                 action: () => {
-                    showImagePopup('游戏素材/第二章 /第二章-场景3/黑鲨档案.png', () => {
-                        showHintText('屏幕上的红字刺痛了你的眼睛。\n100% 的报废率。\n在他身边的人，没有一个是活着回来的。\n但你别无选择。', 4000);
+                    showImagePopup('游戏素材/第二章 /第二章-场景3/黑鲨档案.JPG', () => {
+                        showHintText('屏幕上的红字刺痛了你的眼睛。\n0% 的资源共享率。\n这意味着你可能需要独自面对危机。\n但你别无选择。', 4000);
                         setTimeout(() => {
                             playScene('chapter2_4');
                         }, 4500);
@@ -738,7 +776,7 @@ function chapter2Scene4() {
 
 // 第三章-场景1
 function chapter3Scene1() {
-    playVideo('游戏素材/第三章/第三章-场景1/潜艇下潜.mp4', () => {
+    playVideo('游戏素材/第三章/第三章-场景1/潜艇下潜（新）.mp4', () => {
         showBackground('游戏素材/第三章/第三章-场景1/雷达扫描图.png');
         showHintText('"当前深度安全，\n适合常规开采。"', 2000);
         
@@ -950,6 +988,23 @@ function showOxygenSlider() {
         }
     };
     
+    // 返回键
+    let backBtn = document.getElementById('oxygen-back-btn');
+    if (!backBtn) {
+        backBtn = document.createElement('button');
+        backBtn.id = 'oxygen-back-btn';
+        backBtn.className = 'confirm-button back-button';
+        backBtn.textContent = '↩ 返回上一步';
+        confirmBtn.parentNode.insertBefore(backBtn, confirmBtn.nextSibling);
+    }
+    backBtn.onclick = function() {
+        elements.oxygenSlider.classList.remove('active');
+        setTimeout(() => {
+            elements.oxygenSlider.classList.add('hidden');
+            playScene('chapter5_2');
+        }, 300);
+    };
+
     // 确认按钮
     confirmBtn.onclick = function() {
         const finalValue = parseInt(slider.value);
@@ -1210,8 +1265,12 @@ function chapter6Scene3() {
 
 // 结局场景
 function endingScene() {
-    // 第三版：结束语改为播放视频（若不存在则降级为感谢参与）
-    playEndingVideo();
+    hideAllUI();
+    gameData.playTime = Math.floor((Date.now() - gameData.startTime) / 1000);
+    console.log('=== 游戏数据 ===', '氧气:', gameData.oxygenValue, '结局:', gameData.ending);
+    playVideo('游戏素材/第六章/第六章-场景3/结束语.mp4', () => {
+        showParticipantIdInput();
+    });
 }
 
 function playEndingVideo() {
@@ -1265,10 +1324,8 @@ function showEnding() {
     elements.hintText.style.lineHeight = '2.2';
     elements.hintText.classList.add('active');
     
-    // 计算游戏时长
     gameData.playTime = Math.floor((Date.now() - gameData.startTime) / 1000);
     
-    // 显示数据总结
     setTimeout(() => {
         console.log('=== 游戏数据 ===');
         console.log('会话ID:', gameData.sessionId);
@@ -1278,27 +1335,65 @@ function showEnding() {
         console.log('结局:', gameData.ending);
         console.log('选择记录:', gameData.choices);
         
-        // 这里可以发送数据到后端
-        // sendDataToBackend(gameData);
-        
-        // 简化的结束提示
         elements.hintText.classList.remove('active');
         setTimeout(() => {
-            elements.hintText.innerHTML = '感谢您的参与';
-            elements.hintText.style.fontSize = '1.5rem';
-            elements.hintText.classList.add('active');
+            showParticipantIdInput();
         }, 1000);
     }, 10000);
 }
 
-// 发送数据到后端（预留接口）
+function showParticipantIdInput() {
+    hideAllUI();
+    elements.hintText.classList.remove('hidden');
+    elements.hintText.innerHTML = 
+        '<div style="text-align:center;">' +
+        '<div style="font-size:1.2rem;margin-bottom:20px;color:#ccc;">感谢您的参与</div>' +
+        '<div style="font-size:0.9rem;color:#888;margin-bottom:15px;">请输入您的实验编号</div>' +
+        '<input type="text" id="participant-id-input" placeholder="例如：P001" ' +
+        'style="background:rgba(15,20,25,0.9);border:2px solid #333;color:#fff;' +
+        'font-size:1.1rem;padding:12px 16px;width:70%;text-align:center;' +
+        'font-family:\'Noto Sans SC\',sans-serif;border-radius:0;outline:none;" />' +
+        '<br>' +
+        '<button id="submit-id-btn" style="margin-top:15px;background:rgba(15,20,25,0.9);' +
+        'border:2px solid #00ffff;color:#00ffff;font-size:1rem;padding:10px 30px;' +
+        'font-family:\'Noto Sans SC\',sans-serif;cursor:pointer;">开始填写问卷</button>' +
+        '</div>';
+    elements.hintText.style.fontSize = '';
+    elements.hintText.style.lineHeight = '';
+    elements.hintText.classList.add('active');
+    
+    document.getElementById('submit-id-btn').onclick = function() {
+        const pid = document.getElementById('participant-id-input').value.trim();
+        if (!pid) {
+            document.getElementById('participant-id-input').style.borderColor = '#ff4444';
+            document.getElementById('participant-id-input').setAttribute('placeholder', '请输入编号后再提交');
+            return;
+        }
+        gameData.participantId = pid;
+
+        var record = {
+            participantId: gameData.participantId,
+            oxygenValue: gameData.oxygenValue,
+            ending: gameData.ending,
+            timestamp: new Date().toISOString()
+        };
+        var records = JSON.parse(localStorage.getItem('abyssBreathData') || '[]');
+        records.push(record);
+        localStorage.setItem('abyssBreathData', JSON.stringify(records));
+
+        fetch('/api/save-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(record)
+        }).catch(function(err) {
+            console.warn('云端保存失败，数据已存本地:', err);
+        }).finally(function() {
+            window.location.href = 'https://wj.qq.com/s2/26177999/8853/';
+        });
+    };
+}
+
 function sendDataToBackend(data) {
-    // TODO: 实现数据发送
-    // fetch('/api/save-game-data', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(data)
-    // });
 }
 
 // 页面加载完成后初始化
