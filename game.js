@@ -1384,7 +1384,7 @@ function showParticipantIdInput() {
         fetch('/api/save-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(record)
+            body: JSON.stringify(Object.assign({}, record, { group: 'exp' }))
         }).catch(function(err) {
             console.warn('云端保存失败，数据已存本地:', err);
         }).finally(function() {

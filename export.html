@@ -8,7 +8,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'Noto Sans SC', -apple-system, sans-serif; background: #0a0e13; color: #ccc; padding: 20px; min-height: 100vh; }
 h1 { text-align: center; color: #00ffff; margin-bottom: 8px; font-size: 1.4rem; }
-.subtitle { text-align: center; color: #666; font-size: 0.85rem; margin-bottom: 24px; }
+.subtitle { text-align: center; color: #666; font-size: 0.85rem; margin-bottom: 20px; }
+.tab-row { text-align: center; margin-bottom: 16px; }
+.tab-btn { background: rgba(15,20,25,0.9); border: 2px solid #333; color: #888; font-size: 0.95rem; padding: 10px 28px; cursor: pointer; font-family: inherit; margin: 0 4px 8px; transition: all 0.2s; }
+.tab-btn.active { border-color: #00ffff; color: #00ffff; background: #00ffff11; }
+.tab-btn:hover { border-color: #00ffff88; color: #00ffffaa; }
 .stats { text-align: center; color: #888; margin-bottom: 16px; font-size: 0.9rem; }
 .stats span { color: #00ffff; font-weight: bold; }
 .source-tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; margin-left: 8px; }
@@ -19,22 +23,28 @@ th { background: #1a2030; color: #00ffff; padding: 10px 8px; text-align: left; b
 td { padding: 10px 8px; border-bottom: 1px solid #1a2030; }
 tr:hover td { background: #111822; }
 .btn-row { text-align: center; margin-bottom: 20px; }
-button { background: rgba(15,20,25,0.9); border: 2px solid #00ffff; color: #00ffff; font-size: 0.95rem; padding: 10px 24px; cursor: pointer; font-family: inherit; margin: 0 6px 8px; }
-button:hover { background: #00ffff22; }
-button.danger { border-color: #ff4444; color: #ff4444; }
+button.action { background: rgba(15,20,25,0.9); border: 2px solid #00ffff; color: #00ffff; font-size: 0.95rem; padding: 10px 24px; cursor: pointer; font-family: inherit; margin: 0 6px 8px; }
+button.action:hover { background: #00ffff22; }
+button.danger { background: rgba(15,20,25,0.9); border: 2px solid #ff4444; color: #ff4444; font-size: 0.95rem; padding: 10px 24px; cursor: pointer; font-family: inherit; margin: 0 6px 8px; }
 button.danger:hover { background: #ff444422; }
 .empty { text-align: center; color: #555; margin-top: 60px; font-size: 1.1rem; }
 .loading { text-align: center; color: #888; margin-top: 40px; }
 </style>
 </head>
 <body>
-<h1>深渊呼吸 — 实验数据</h1>
+<h1>实验数据导出</h1>
 <p class="subtitle">此页面仅供研究者使用，游戏中无入口</p>
+
+<div class="tab-row">
+  <button class="tab-btn active" id="tab-exp" onclick="switchGroup('exp')">实验组（深渊呼吸）</button>
+  <button class="tab-btn" id="tab-ctrl" onclick="switchGroup('ctrl')">对照组（钢铁帷幕）</button>
+</div>
+
 <div class="stats" id="stats"></div>
 <div class="btn-row">
-  <button onclick="downloadCSV()">下载 CSV</button>
-  <button onclick="copyAll()">复制全部数据</button>
-  <button onclick="loadData()">刷新数据</button>
+  <button class="action" onclick="downloadCSV()">下载 CSV</button>
+  <button class="action" onclick="copyAll()">复制全部数据</button>
+  <button class="action" onclick="loadData()">刷新数据</button>
   <button class="danger" onclick="clearLocal()">清空本机缓存</button>
 </div>
 <div id="content"><div class="loading">加载中...</div></div>
@@ -42,14 +52,24 @@ button.danger:hover { background: #ff444422; }
 <script>
 var currentData = [];
 var dataSource = '';
+var currentGroup = 'exp';
+var groupNames = { exp: '实验组（深渊呼吸）', ctrl: '对照组（钢铁帷幕）' };
+var localKeys = { exp: 'abyssBreathData', ctrl: 'abyssBreathData_ctrl' };
+
+function switchGroup(group) {
+  currentGroup = group;
+  document.getElementById('tab-exp').className = 'tab-btn' + (group === 'exp' ? ' active' : '');
+  document.getElementById('tab-ctrl').className = 'tab-btn' + (group === 'ctrl' ? ' active' : '');
+  loadData();
+}
 
 function getLocalData() {
-  return JSON.parse(localStorage.getItem('abyssBreathData') || '[]');
+  return JSON.parse(localStorage.getItem(localKeys[currentGroup]) || '[]');
 }
 
 function loadData() {
-  document.getElementById('content').innerHTML = '<div class="loading">正在从云端加载...</div>';
-  fetch('/api/export-data')
+  document.getElementById('content').innerHTML = '<div class="loading">正在从云端加载 ' + groupNames[currentGroup] + ' 数据...</div>';
+  fetch('/api/export-data?group=' + currentGroup)
     .then(function(r) { return r.json(); })
     .then(function(res) {
       if (res.records && res.records.length > 0) {
@@ -78,7 +98,7 @@ function render() {
     ? '<span class="source-tag source-cloud">云端数据</span>'
     : '<span class="source-tag source-local">本机缓存</span>';
 
-  statsEl.innerHTML = '共 <span>' + currentData.length + '</span> 条记录 ' + tag;
+  statsEl.innerHTML = groupNames[currentGroup] + '：共 <span>' + currentData.length + '</span> 条记录 ' + tag;
 
   if (currentData.length === 0) {
     contentEl.innerHTML = '<div class="empty">暂无数据</div>';
@@ -110,7 +130,8 @@ function downloadCSV() {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = '深渊呼吸_实验数据_' + new Date().toISOString().slice(0, 10) + '.csv';
+  var prefix = currentGroup === 'exp' ? '实验组' : '对照组';
+  a.download = prefix + '_实验数据_' + new Date().toISOString().slice(0, 10) + '.csv';
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -130,8 +151,8 @@ function copyAll() {
 }
 
 function clearLocal() {
-  if (!confirm('确定清空本机缓存？（不影响云端数据）')) return;
-  localStorage.removeItem('abyssBreathData');
+  if (!confirm('确定清空本机' + groupNames[currentGroup] + '的缓存？（不影响云端数据）')) return;
+  localStorage.removeItem(localKeys[currentGroup]);
   if (dataSource === 'local') { currentData = []; render(); }
 }
 

@@ -6,13 +6,16 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
+    var group = req.query.group === 'ctrl' ? 'ctrl' : 'exp';
+    var listKey = group === 'ctrl' ? 'game_data_ctrl' : 'game_data';
+
     var response = await fetch(process.env.KV_REST_API_URL, {
       method: 'POST',
       headers: {
         Authorization: 'Bearer ' + process.env.KV_REST_API_TOKEN,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(['LRANGE', 'game_data', 0, -1])
+      body: JSON.stringify(['LRANGE', listKey, 0, -1])
     });
 
     var result = await response.json();

@@ -12,10 +12,14 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'Missing participantId' });
     }
 
+    var group = data.group === 'ctrl' ? 'ctrl' : 'exp';
+    var listKey = group === 'ctrl' ? 'game_data_ctrl' : 'game_data';
+
     var record = JSON.stringify({
       participantId: data.participantId,
       oxygenValue: data.oxygenValue,
       ending: data.ending,
+      group: group,
       timestamp: data.timestamp || new Date().toISOString()
     });
 
@@ -25,7 +29,7 @@ module.exports = async function handler(req, res) {
         Authorization: 'Bearer ' + process.env.KV_REST_API_TOKEN,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(['LPUSH', 'game_data', record])
+      body: JSON.stringify(['LPUSH', listKey, record])
     });
 
     var result = await response.json();
