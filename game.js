@@ -1268,9 +1268,13 @@ function endingScene() {
     hideAllUI();
     gameData.playTime = Math.floor((Date.now() - gameData.startTime) / 1000);
     console.log('=== 游戏数据 ===', '氧气:', gameData.oxygenValue, '结局:', gameData.ending);
-    playVideo('游戏素材/第六章/第六章-场景3/结束语.mp4', () => {
+    if (gameData.ending === '结局A：深渊永眠') {
         showParticipantIdInput();
-    });
+    } else {
+        playVideo('游戏素材/第六章/第六章-场景3/结束语.mp4', () => {
+            showParticipantIdInput();
+        });
+    }
 }
 
 function playEndingVideo() {
