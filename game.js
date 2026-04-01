@@ -1388,7 +1388,7 @@ function showParticipantIdInput() {
         }).catch(function(err) {
             console.warn('云端保存失败，数据已存本地:', err);
         }).finally(function() {
-            window.location.href = 'https://wj.qq.com/s2/26177999/8853/';
+            window.location.href = 'https://v.wjx.cn/vm/ObZnWk8.aspx';
         });
     };
 }
