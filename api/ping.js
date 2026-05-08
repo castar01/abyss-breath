@@ -20,7 +20,33 @@ module.exports = async function handler(req, res) {
     }));
   }
 
-  var upstashUrl = process.env.KV_REST_API_URL.replace(/\/+$/, '');
+  var rawUrl = process.env.KV_REST_API_URL;
+  try {
+    var u = new URL(rawUrl);
+    diag.urlInfo = {
+      protocol: u.protocol,
+      hostname: u.hostname,
+      port: u.port || '(default)',
+      length: rawUrl.length
+    };
+  } catch (e) {
+    diag.urlInfo = { error: 'Invalid URL: ' + String(e), preview: rawUrl.slice(0, 40) };
+  }
+  diag.kvUrlPreview = rawUrl.slice(0, 12) + '...';
+  diag.altEnv = {
+    KV_URL: process.env.KV_URL ? process.env.KV_URL.slice(0, 12) + '...' : null,
+    REDIS_URL: process.env.REDIS_URL ? process.env.REDIS_URL.slice(0, 12) + '...' : null
+  };
+
+  if (diag.urlInfo && diag.urlInfo.protocol && !/^https?:$/.test(diag.urlInfo.protocol)) {
+    return res.status(500).json(Object.assign(diag, {
+      ok: false,
+      stage: 'url-protocol',
+      error: 'KV_REST_API_URL is not http/https. REST API requires HTTPS endpoint, got: ' + diag.urlInfo.protocol
+    }));
+  }
+
+  var upstashUrl = rawUrl.replace(/\/+$/, '');
   var headers = {
     Authorization: 'Bearer ' + process.env.KV_REST_API_TOKEN,
     'Content-Type': 'application/json'

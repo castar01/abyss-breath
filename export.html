@@ -178,6 +178,17 @@ function pingCloud() {
       lines.push((d.ok ? '✓ 云端连通正常' : '✗ 云端连通异常') + '  (HTTP ' + res.status + ')');
       lines.push('环境变量：KV_REST_API_URL=' + (d.envCheck && d.envCheck.KV_REST_API_URL ? '已配置' : '缺失') +
                  ' | KV_REST_API_TOKEN=' + (d.envCheck && d.envCheck.KV_REST_API_TOKEN ? '已配置' : '缺失'));
+      if (d.urlInfo) {
+        if (d.urlInfo.error) {
+          lines.push('URL 解析失败：' + d.urlInfo.error + '（preview: ' + (d.urlInfo.preview || '') + '）');
+        } else {
+          lines.push('REST URL 协议：' + d.urlInfo.protocol + '  域名：' + d.urlInfo.hostname);
+        }
+      }
+      if (d.kvUrlPreview) lines.push('KV_REST_API_URL 前缀：' + d.kvUrlPreview);
+      if (d.altEnv) {
+        lines.push('其他变量：KV_URL=' + (d.altEnv.KV_URL || '无') + ' | REDIS_URL=' + (d.altEnv.REDIS_URL || '无'));
+      }
       if (d.counts) {
         lines.push('当前云端记录数：实验组(game_data) = ' + (d.counts.exp != null ? d.counts.exp : '-') +
                    '，对照组(game_data_ctrl) = ' + (d.counts.ctrl != null ? d.counts.ctrl : '-'));
