@@ -1385,14 +1385,34 @@ function showParticipantIdInput() {
         records.push(record);
         localStorage.setItem('abyssBreathData', JSON.stringify(records));
 
+        var btn = document.getElementById('submit-id-btn');
+        if (btn) { btn.disabled = true; btn.textContent = '正在保存...'; }
+
+        var payload = JSON.stringify(Object.assign({}, record, { group: 'exp' }));
+        var didJump = false;
+        function jumpToSurvey() {
+            if (didJump) return;
+            didJump = true;
+            window.location.href = 'https://v.wjx.cn/vm/ObZnWk8.aspx';
+        }
+
+        var timer = setTimeout(jumpToSurvey, 6000);
+
         fetch('/api/save-data', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(Object.assign({}, record, { group: 'exp' }))
+            body: payload,
+            keepalive: true
+        }).then(function(resp) {
+            console.log('云端保存响应状态:', resp.status);
+            return resp.json().catch(function() { return {}; });
+        }).then(function(data) {
+            console.log('云端保存结果:', data);
         }).catch(function(err) {
             console.warn('云端保存失败，数据已存本地:', err);
         }).finally(function() {
-            window.location.href = 'https://v.wjx.cn/vm/ObZnWk8.aspx';
+            clearTimeout(timer);
+            jumpToSurvey();
         });
     };
 }
