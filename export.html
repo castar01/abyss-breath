@@ -29,6 +29,12 @@ button.danger { background: rgba(15,20,25,0.9); border: 2px solid #ff4444; color
 button.danger:hover { background: #ff444422; }
 .empty { text-align: center; color: #555; margin-top: 60px; font-size: 1.1rem; }
 .loading { text-align: center; color: #888; margin-top: 40px; }
+.diag-box { max-width: 700px; margin: 0 auto 20px; padding: 14px 16px; background: rgba(15,20,25,0.7); border-left: 3px solid #00ffff66; font-size: 0.85rem; line-height: 1.7; display: none; white-space: pre-wrap; word-break: break-all; }
+.diag-box.show { display: block; }
+.diag-box.ok { border-left-color: #00ff88; color: #aaffcc; }
+.diag-box.fail { border-left-color: #ff4444; color: #ffaaaa; }
+button.test { background: rgba(15,20,25,0.9); border: 2px solid #ffaa00; color: #ffaa00; font-size: 0.95rem; padding: 10px 24px; cursor: pointer; font-family: inherit; margin: 0 6px 8px; }
+button.test:hover { background: #ffaa0022; }
 </style>
 </head>
 <body>
@@ -45,8 +51,10 @@ button.danger:hover { background: #ff444422; }
   <button class="action" onclick="downloadCSV()">下载 CSV</button>
   <button class="action" onclick="copyAll()">复制全部数据</button>
   <button class="action" onclick="loadData()">刷新数据</button>
+  <button class="test" onclick="pingCloud()">测试云端连通</button>
   <button class="danger" onclick="clearLocal()">清空本机缓存</button>
 </div>
+<div id="diag" class="diag-box"></div>
 <div id="content"><div class="loading">加载中...</div></div>
 
 <script>
@@ -154,6 +162,40 @@ function clearLocal() {
   if (!confirm('确定清空本机' + groupNames[currentGroup] + '的缓存？（不影响云端数据）')) return;
   localStorage.removeItem(localKeys[currentGroup]);
   if (dataSource === 'local') { currentData = []; render(); }
+}
+
+function pingCloud() {
+  var box = document.getElementById('diag');
+  box.className = 'diag-box show';
+  box.textContent = '正在测试云端连通...';
+  fetch('/api/ping')
+    .then(function(r) {
+      return r.json().then(function(d) { return { status: r.status, body: d }; });
+    })
+    .then(function(res) {
+      var d = res.body || {};
+      var lines = [];
+      lines.push((d.ok ? '✓ 云端连通正常' : '✗ 云端连通异常') + '  (HTTP ' + res.status + ')');
+      lines.push('环境变量：KV_REST_API_URL=' + (d.envCheck && d.envCheck.KV_REST_API_URL ? '已配置' : '缺失') +
+                 ' | KV_REST_API_TOKEN=' + (d.envCheck && d.envCheck.KV_REST_API_TOKEN ? '已配置' : '缺失'));
+      if (d.counts) {
+        lines.push('当前云端记录数：实验组(game_data) = ' + (d.counts.exp != null ? d.counts.exp : '-') +
+                   '，对照组(game_data_ctrl) = ' + (d.counts.ctrl != null ? d.counts.ctrl : '-'));
+      }
+      if (!d.ok) {
+        if (d.stage) lines.push('失败阶段：' + d.stage);
+        if (d.error) lines.push('错误信息：' + d.error);
+        if (d.set) lines.push('SET 响应：' + JSON.stringify(d.set));
+        if (d.get) lines.push('GET 响应：' + JSON.stringify(d.get));
+      }
+      lines.push('时间：' + (d.timestamp || ''));
+      box.textContent = lines.join('\n');
+      box.className = 'diag-box show ' + (d.ok ? 'ok' : 'fail');
+    })
+    .catch(function(err) {
+      box.className = 'diag-box show fail';
+      box.textContent = '✗ 测试请求失败：' + (err && err.message || err) + '\n（可能是网络问题或接口未部署）';
+    });
 }
 
 loadData();
