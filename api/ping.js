@@ -96,10 +96,22 @@ module.exports = async function handler(req, res) {
       message: 'Upstash connection healthy'
     }));
   } catch (err) {
+    var cause = err && err.cause ? err.cause : null;
     return res.status(500).json(Object.assign(diag, {
       ok: false,
       stage: 'exception',
-      error: String(err && err.message || err)
+      error: String(err && err.message || err),
+      cause: cause ? {
+        code: cause.code,
+        errno: cause.errno,
+        syscall: cause.syscall,
+        hostname: cause.hostname,
+        address: cause.address,
+        port: cause.port,
+        message: cause.message
+      } : null,
+      errorName: err && err.name,
+      stack: err && err.stack ? err.stack.split('\n').slice(0, 6) : null
     }));
   }
 };
